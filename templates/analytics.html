@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Productivity Analytics — TaskNova{% endblock %}
+
+{% block content %}
+<div class="analytics-page">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold mb-1">Productivity Analytics & Insights</h4>
+      <span class="text-muted small">Deep telemetry into your execution velocity, focus sessions, and habits</span>
+    </div>
+    <div class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-semibold">
+      <i class="fa-solid fa-bolt text-warning me-1"></i> Real SQLite Telemetry
+    </div>
+  </div>
+
+  <!-- Streaks & Focus Summary Cards -->
+  <div class="row g-4 mb-4">
+    <!-- Current Streak -->
+    <div class="col-xl-3 col-sm-6">
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Current Streak</span>
+          <div class="stat-icon-wrapper" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+            <i class="fa-solid fa-fire"></i>
+          </div>
+        </div>
+        <div class="stat-number text-warning">{{ streaks.current_streak }} Days</div>
+        <div class="stat-meta">
+          {% if streaks.active_today %}
+          <span class="trend-positive"><i class="fa-solid fa-check"></i> Active today!</span>
+          {% else %}
+          <span class="text-muted">Complete 1 task today to extend!</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Best Streak -->
+    <div class="col-xl-3 col-sm-6">
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Best Streak</span>
+          <div class="stat-icon-wrapper" style="background: rgba(99, 102, 241, 0.1); color: #6366f1;">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+        </div>
+        <div class="stat-number">{{ streaks.best_streak }} Days</div>
+        <div class="stat-meta">
+          <span>All-time consistency high</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Focus Minutes -->
+    <div class="col-xl-3 col-sm-6">
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Total Focus Time</span>
+          <div class="stat-icon-wrapper" style="background: rgba(56, 189, 248, 0.1); color: #0284c7;">
+            <i class="fa-solid fa-stopwatch"></i>
+          </div>
+        </div>
+        <div class="stat-number">{{ focus_stats.total_minutes }} Min</div>
+        <div class="stat-meta">
+          <span>Across {{ focus_stats.total_sessions }} Pomodoro sessions</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- High Priority Accomplished -->
+    <div class="col-xl-3 col-sm-6">
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <span class="stat-card-title">High-Impact Delivered</span>
+          <div class="stat-icon-wrapper" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+            <i class="fa-solid fa-award"></i>
+          </div>
+        </div>
+        <div class="stat-number text-success">{{ insights.high_priority_completed }} Tasks</div>
+        <div class="stat-meta">
+          <span>Urgent & High priorities solved</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Insights Cards Row -->
+  <div class="row g-4 mb-4">
+    <!-- Most Productive Day -->
+    <div class="col-md-4">
+      <div class="stat-card h-100">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <div class="stat-icon-wrapper" style="background: rgba(99, 102, 241, 0.1); color: #6366f1;">
+            <i class="fa-regular fa-calendar-check"></i>
+          </div>
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Peak Velocity Day</span>
+            <h5 class="fw-bold mb-0 text-dark">{{ insights.best_day }}</h5>
+          </div>
+        </div>
+        <p class="text-muted small mb-0 mt-2">
+          Historically, you achieve the highest rate of task completions on this day of the week.
+        </p>
+      </div>
+    </div>
+
+    <!-- Top Category -->
+    <div class="col-md-4">
+      <div class="stat-card h-100">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <div class="stat-icon-wrapper" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+            <i class="fa-solid fa-tags"></i>
+          </div>
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Top Output Category</span>
+            <h5 class="fw-bold mb-0 text-dark">{{ insights.top_category }}</h5>
+          </div>
+        </div>
+        <p class="text-muted small mb-0 mt-2">
+          Your most frequently finished category across all historical tasks.
+        </p>
+      </div>
+    </div>
+
+    <!-- Average Per Active Day -->
+    <div class="col-md-4">
+      <div class="stat-card h-100">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <div class="stat-icon-wrapper" style="background: rgba(2, 132, 199, 0.1); color: #0284c7;">
+            <i class="fa-solid fa-gauge-high"></i>
+          </div>
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Avg Velocity / Day</span>
+            <h5 class="fw-bold mb-0 text-dark">{{ insights.avg_per_active_day }} Tasks/day</h5>
+          </div>
+        </div>
+        <p class="text-muted small mb-0 mt-2">
+          Average number of tasks finalized on days where at least one task was completed.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics Charts Row -->
+  <div class="row g-4 mb-4">
+    <!-- 7-Day Completion Line Chart -->
+    <div class="col-lg-7">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h6 class="fw-bold mb-0">7-Day Completion Trend</h6>
+            <span class="text-muted small">Daily volume of resolved items</span>
+          </div>
+          <span class="badge bg-light text-primary border rounded-pill px-3 py-2 fw-semibold">
+            Avg {{ charts_data.seven_day_avg }} tasks/day
+          </span>
+        </div>
+        <div style="height: 280px; position: relative;">
+          <canvas id="analyticsWeeklyChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Priority Distribution Bar Chart -->
+    <div class="col-lg-5">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h6 class="fw-bold mb-0">Tasks by Priority</h6>
+            <span class="text-muted small">Current load across urgency levels</span>
+          </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+          <canvas id="analyticsPriorityChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Focus Sessions Table -->
+  <div class="stat-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h6 class="fw-bold mb-0">Recent Nova Focus Sessions</h6>
+        <span class="text-muted small">Logged Pomodoro focus sessions recorded in database</span>
+      </div>
+      <button class="btn btn-sm btn-primary rounded-pill px-3" style="background: var(--color-indigo-600); border:none;" onclick="openFocusModal()">
+        <i class="fa-solid fa-play me-1"></i> Start New Session
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="small text-muted fw-semibold">Task / Session</th>
+            <th class="small text-muted fw-semibold">Duration</th>
+            <th class="small text-muted fw-semibold">Completed At</th>
+            <th class="small text-muted fw-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if recent_sessions %}
+            {% for s in recent_sessions %}
+            <tr>
+              <td>
+                <div class="fw-bold text-dark">{{ s.task_title }}</div>
+                {% if s.priority %}
+                <span class="task-badge {{ s.priority|lower }}" style="font-size: 0.65rem;">{{ s.priority }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1">
+                  {{ s.duration_minutes }} Minutes
+                </span>
+              </td>
+              <td class="text-muted small">{{ s.completed_at }}</td>
+              <td class="text-muted small">{{ s.notes or 'Standard Pomodoro interval completed.' }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="text-center py-4 text-muted small">No focus sessions logged yet. Launch Nova Focus Mode to start!</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  window.analyticsChartsData = {{ charts_data|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — TaskNova Productivity{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+  
+  <!-- 1. Quick Capture Input Card -->
+  <div class="quick-capture-card">
+    <form class="quick-capture-form" onsubmit="handleQuickCapture(event)">
+      <i class="fa-solid fa-sparkles text-primary fs-5" style="color: var(--color-indigo-600) !important;"></i>
+      <input type="text" class="quick-capture-input" id="quickCaptureInput" placeholder="Quick Capture: Type a task name and press Enter (e.g. Schedule code review with DevOps)..." required>
+      <select class="form-select form-select-sm border-0 bg-light w-auto d-none d-md-block" id="quickCapturePriority" style="max-width: 120px;">
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+        <option value="Urgent">Urgent</option>
+        <option value="Low">Low</option>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3" style="background: var(--color-indigo-600); border:none;">
+        <i class="fa-solid fa-plus me-1"></i> Add
+      </button>
+    </form>
+  </div>
+
+  <!-- 2. Statistics Cards Row -->
+  <div class="row g-4 mb-4">
+    <!-- Total Tasks -->
+    <div class="col-xl-3 col-sm-6">
+      <div class="stat-card total">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Total Tasks</span>
+          <div class="stat-icon-wrapper total">
+            <i class="fa-solid fa-list-check"></i>
+          </div>
+        </div>
+        <div class="stat-number" id="statTotal">{{ metrics.total_tasks }}</div>
+        <div class="stat-meta">
+          <i class="fa-solid fa-database text-muted"></i>
+          <span>All tracked in SQLite</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completed Today -->
+    <div class="col-xl-3 col-sm-6">
+      <div class="stat-card completed">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Completed Today</span>
+          <div class="stat-icon-wrapper completed">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+        </div>
+        <div class="stat-number" id="statCompletedToday">{{ metrics.completed_today }}</div>
+        <div class="stat-meta">
+          <span class="trend-positive"><i class="fa-solid fa-arrow-trend-up"></i> {{ metrics.today_progress_pct }}%</span>
+          <span>of today's schedule</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Tasks -->
+    <div class="col-xl-3 col-sm-6">
+      <div class="stat-card pending">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Pending Tasks</span>
+          <div class="stat-icon-wrapper pending">
+            <i class="fa-regular fa-clock"></i>
+          </div>
+        </div>
+        <div class="stat-number" id="statPending">{{ metrics.pending_tasks }}</div>
+        <div class="stat-meta">
+          <span>Active in pipeline</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overdue Tasks -->
+    <div class="col-xl-3 col-sm-6">
+      <div class="stat-card overdue">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Overdue Tasks</span>
+          <div class="stat-icon-wrapper overdue">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+        </div>
+        <div class="stat-number" id="statOverdue">{{ metrics.overdue_tasks }}</div>
+        <div class="stat-meta">
+          {% if metrics.overdue_tasks > 0 %}
+          <span class="trend-alert"><i class="fa-solid fa-circle-exclamation"></i> Requires attention</span>
+          {% else %}
+          <span class="trend-positive"><i class="fa-solid fa-check"></i> Zero overdue!</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Smart Priority Assistant & Today's Focus Row -->
+  <div class="row g-4 mb-4">
+    <!-- Smart Priority Assistant -->
+    <div class="col-lg-5">
+      <div class="nova-recommendation-card h-100 d-flex flex-direction-column justify-content-between">
+        <div>
+          <div class="rec-badge-pill">
+            <i class="fa-solid fa-microchip"></i> Smart Priority Assistant
+          </div>
+          {% if recommendation %}
+          <div class="rec-title">{{ recommendation.task.title }}</div>
+          <p class="rec-explanation">{{ recommendation.explanation }}</p>
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="task-badge {{ recommendation.task.priority|lower }}">
+              <i class="fa-solid fa-bolt"></i> {{ recommendation.task.priority }}
+            </span>
+            <span class="task-project-pill">
+              <i class="fa-solid fa-folder me-1"></i> {{ recommendation.task.category }}
+            </span>
+            {% if recommendation.task.due_date %}
+            <span class="task-date-pill">
+              <i class="fa-regular fa-calendar me-1"></i> Due: {{ recommendation.task.due_date|replace('T', ' ') }}
+            </span>
+            {% endif %}
+            <span class="task-date-pill">
+              <i class="fa-regular fa-hourglass-half me-1"></i> {{ recommendation.task.estimated_duration }}m
+            </span>
+          </div>
+          {% else %}
+          <div class="text-center py-4">
+            <i class="fa-regular fa-circle-check text-success fs-1 mb-2"></i>
+            <h6 class="fw-bold">Queue is Clear!</h6>
+            <p class="text-muted small">No pending tasks found. Create a new task to receive personalized priority recommendations.</p>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if recommendation %}
+        <div class="d-flex gap-2 pt-2 border-top">
+          <button class="btn btn-primary rounded-pill btn-sm px-3" style="background: var(--color-indigo-600); border:none;" onclick="startFocusWithTask({{ recommendation.task.id }}, '{{ recommendation.task.title|replace("'", "\\'") }}')">
+            <i class="fa-solid fa-play me-1"></i> Start Focus Session (25m)
+          </button>
+          <button class="btn btn-outline-secondary rounded-pill btn-sm px-3" onclick="toggleTaskComplete({{ recommendation.task.id }})">
+            <i class="fa-solid fa-check me-1"></i> Done
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Today's Focus Card -->
+    <div class="col-lg-7">
+      <div class="today-focus-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <h5 class="fw-bold mb-1">Today's Focus</h5>
+            <span class="text-muted small">High-priority targets scheduled for today</span>
+          </div>
+          <span class="badge rounded-pill bg-light text-dark border px-3 py-2 fw-semibold">
+            {{ metrics.today_completed }}/{{ metrics.today_total }} Completed
+          </span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="focus-progress-wrapper">
+          <div class="progress-header">
+            <span>Daily Completion Progress</span>
+            <span>{{ metrics.today_progress_pct }}%</span>
+          </div>
+          <div class="custom-progress-bar">
+            <div class="custom-progress-fill" style="width: {{ metrics.today_progress_pct }}%;"></div>
+          </div>
+        </div>
+
+        <!-- Focus Tasks List -->
+        <div class="today-focus-list">
+          {% if today_focus %}
+            {% for task in today_focus %}
+            <div class="task-item py-2 px-3 mb-2" id="task-row-{{ task.id }}">
+              <div class="task-left">
+                <button class="custom-checkbox-btn {% if task.status == 'Completed' %}checked{% endif %}" onclick="toggleTaskComplete({{ task.id }})" aria-label="Toggle Complete">
+                  <i class="fa-solid fa-check fa-xs"></i>
+                </button>
+                <div class="task-info-block">
+                  <div class="task-title-row">
+                    <span class="task-title">{{ task.title }}</span>
+                  </div>
+                  <div class="task-meta-row">
+                    <span class="task-badge {{ task.priority|lower }}">{{ task.priority }}</span>
+                    {% if task.project_name %}
+                    <span class="task-project-pill">
+                      <span class="project-dot" style="background-color: {{ task.project_color or '#6366f1' }};"></span>
+                      {{ task.project_name }}
+                    </span>
+                    {% endif %}
+                    {% if task.due_date %}
+                    <span class="task-date-pill">
+                      <i class="fa-regular fa-calendar"></i> {{ task.due_date|replace('T', ' ') }}
+                    </span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              <div class="task-right">
+                <button class="action-icon-btn" onclick="startFocusWithTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')" title="Focus with Pomodoro">
+                  <i class="fa-solid fa-stopwatch text-primary"></i>
+                </button>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4 text-muted">
+              <i class="fa-regular fa-calendar-check fs-2 mb-2"></i>
+              <p class="mb-0 small">No pending tasks for today. Great job keeping your plate clean!</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Productivity Analytics Charts Row -->
+  <div class="row g-4 mb-4">
+    <!-- Weekly Completion Line Chart -->
+    <div class="col-lg-8">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h6 class="fw-bold mb-0">Weekly Completion Trend</h6>
+            <span class="text-muted small">Tasks completed over the last 7 days</span>
+          </div>
+          <div class="badge bg-light text-primary border rounded-pill px-3 py-2 fw-semibold">
+            {{ charts_data.seven_day_total }} Total Completed this week
+          </div>
+        </div>
+        <div style="height: 260px; position: relative;">
+          <canvas id="weeklyTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status & Priority Doughnut Chart -->
+    <div class="col-lg-4">
+      <div class="stat-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h6 class="fw-bold mb-0">Task Distribution</h6>
+            <span class="text-muted small">Completed vs In Progress vs Pending</span>
+          </div>
+        </div>
+        <div style="height: 200px; position: relative;" class="d-flex align-items-center justify-content-center">
+          <canvas id="statusDoughnutChart"></canvas>
+        </div>
+        <div class="mt-3 pt-2 border-top d-flex justify-content-around text-center small">
+          <div>
+            <div class="fw-bold text-success">{{ charts_data.status_distribution.data[0] }}</div>
+            <span class="text-muted" style="font-size: 0.72rem;">Completed</span>
+          </div>
+          <div>
+            <div class="fw-bold text-info">{{ charts_data.status_distribution.data[1] }}</div>
+            <span class="text-muted" style="font-size: 0.72rem;">In Progress</span>
+          </div>
+          <div>
+            <div class="fw-bold text-secondary">{{ charts_data.status_distribution.data[2] }}</div>
+            <span class="text-muted" style="font-size: 0.72rem;">Pending</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Recent Active Tasks -->
+  <div class="stat-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h6 class="fw-bold mb-0">Recent Tasks</h6>
+        <span class="text-muted small">Latest items in your workspace</span>
+      </div>
+      <a href="{{ url_for('main.tasks') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+        View All Tasks <i class="fa-solid fa-arrow-right ms-1"></i>
+      </a>
+    </div>
+
+    <div class="recent-tasks-list">
+      {% for task in recent_tasks %}
+      <div class="task-item {% if task.status == 'Completed' %}is-completed{% endif %}" id="task-row-{{ task.id }}">
+        <div class="task-left">
+          <button class="custom-checkbox-btn {% if task.status == 'Completed' %}checked{% endif %}" onclick="toggleTaskComplete({{ task.id }})">
+            <i class="fa-solid fa-check fa-xs"></i>
+          </button>
+          <div class="task-info-block">
+            <div class="task-title-row">
+              <span class="task-title">{{ task.title }}</span>
+            </div>
+            {% if task.description %}
+            <p class="task-desc">{{ task.description }}</p>
+            {% endif %}
+            <div class="task-meta-row">
+              <span class="task-badge {{ task.priority|lower }}">{{ task.priority }}</span>
+              <span class="task-project-pill">{{ task.category }}</span>
+              {% if task.project_name %}
+              <span class="task-project-pill">
+                <span class="project-dot" style="background-color: {{ task.project_color or '#6366f1' }};"></span>
+                {{ task.project_name }}
+              </span>
+              {% endif %}
+              {% if task.due_date %}
+              <span class="task-date-pill">
+                <i class="fa-regular fa-clock"></i> {{ task.due_date|replace('T', ' ') }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="task-right">
+          <button class="action-icon-btn {% if task.is_important %}star-active{% endif %}" onclick="toggleTaskImportant({{ task.id }})" title="Star as Important">
+            <i class="fa-solid fa-star"></i>
+          </button>
+          <button class="action-icon-btn" onclick="openEditTaskModal({{ task.id }})" title="Edit Task">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button class="action-icon-btn danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')" title="Delete Task">
+            <i class="fa-regular fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  window.dashboardChartsData = {{ charts_data|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

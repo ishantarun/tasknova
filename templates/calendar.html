@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar — TaskNova{% endblock %}
+
+{% block content %}
+<div class="calendar-page">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h4 class="fw-bold mb-1">Task Calendar</h4>
+      <span class="text-muted small">View, schedule, and inspect tasks across the month</span>
+    </div>
+
+    <!-- Calendar Month Navigation Controls -->
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-light border rounded-pill px-3 btn-sm" onclick="navCalendar('prev')">
+        <i class="fa-solid fa-chevron-left me-1"></i> Prev
+      </button>
+      <button class="btn btn-outline-primary rounded-pill px-3 btn-sm fw-bold" onclick="navCalendar('today')">
+        Today
+      </button>
+      <button class="btn btn-light border rounded-pill px-3 btn-sm" onclick="navCalendar('next')">
+        Next <i class="fa-solid fa-chevron-right ms-1"></i>
+      </button>
+      <h5 class="fw-bold mb-0 ms-2 text-dark" id="calendarMonthTitle">October 2026</h5>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Calendar Grid (Left Column) -->
+    <div class="col-lg-8">
+      <div class="calendar-card">
+        <!-- Weekday Headers -->
+        <div class="calendar-grid mt-0">
+          <div class="calendar-header-day">Sun</div>
+          <div class="calendar-header-day">Mon</div>
+          <div class="calendar-header-day">Tue</div>
+          <div class="calendar-header-day">Wed</div>
+          <div class="calendar-header-day">Thu</div>
+          <div class="calendar-header-day">Fri</div>
+          <div class="calendar-header-day">Sat</div>
+        </div>
+
+        <!-- Days Grid (Rendered by JS) -->
+        <div class="calendar-grid" id="calendarDaysGrid">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Date Inspector Panel (Right Column) -->
+    <div class="col-lg-4">
+      <div class="stat-card h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h6 class="fw-bold mb-0" id="selectedDateTitle">Selected Date</h6>
+            <span class="text-muted small" id="selectedDateSubtitle">Scheduled tasks</span>
+          </div>
+          <button class="btn btn-sm btn-primary rounded-pill px-3" style="background: var(--color-indigo-600); border:none;" onclick="openTaskModalForSelectedDate()">
+            <i class="fa-solid fa-plus me-1"></i> Add
+          </button>
+        </div>
+
+        <div id="selectedDateTasksList" class="d-flex flex-column gap-2" style="max-height: 480px; overflow-y: auto;">
+          <!-- Dynamically populated when user clicks a date -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  window.allTasksData = {{ tasks|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+{% endblock %}

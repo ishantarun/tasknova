@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Important Tasks — TaskNova{% endblock %}
+
+{% block content %}
+<div class="important-page">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold mb-1">
+        <i class="fa-solid fa-star text-warning me-2"></i>Important Tasks
+      </h4>
+      <span class="text-muted small">High-priority items you've starred for quick access and tracking</span>
+    </div>
+    <button class="btn btn-primary rounded-pill btn-sm px-3 shadow-sm" style="background: var(--color-indigo-600); border:none;" onclick="openTaskModalWithStar()">
+      <i class="fa-solid fa-plus me-1"></i> Add Important Task
+    </button>
+  </div>
+
+  <div class="tasks-container">
+    {% if tasks %}
+      {% for task in tasks %}
+      <div class="task-item {% if task.status == 'Completed' %}is-completed{% endif %}" id="task-row-{{ task.id }}">
+        <div class="task-left">
+          <button class="custom-checkbox-btn {% if task.status == 'Completed' %}checked{% endif %}" onclick="toggleTaskComplete({{ task.id }})">
+            <i class="fa-solid fa-check fa-xs"></i>
+          </button>
+          <div class="task-info-block">
+            <div class="task-title-row">
+              <span class="task-title">{{ task.title }}</span>
+              <i class="fa-solid fa-star text-warning fa-xs"></i>
+            </div>
+            {% if task.description %}
+            <p class="task-desc">{{ task.description }}</p>
+            {% endif %}
+            <div class="task-meta-row">
+              <span class="task-badge {{ task.priority|lower }}">{{ task.priority }}</span>
+              <span class="task-project-pill">{{ task.category }}</span>
+              {% if task.project_name %}
+              <span class="task-project-pill">
+                <span class="project-dot" style="background-color: {{ task.project_color or '#6366f1' }};"></span>
+                {{ task.project_name }}
+              </span>
+              {% endif %}
+              {% if task.due_date %}
+              <span class="task-date-pill">
+                <i class="fa-regular fa-clock"></i> {{ task.due_date|replace('T', ' ') }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="task-right">
+          <button class="action-icon-btn" onclick="startFocusWithTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')" title="Start Pomodoro">
+            <i class="fa-solid fa-stopwatch text-primary"></i>
+          </button>
+          <button class="action-icon-btn star-active" onclick="toggleTaskImportant({{ task.id }})" title="Unstar">
+            <i class="fa-solid fa-star"></i>
+          </button>
+          <button class="action-icon-btn" onclick="openEditTaskModal({{ task.id }})">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button class="action-icon-btn danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')">
+            <i class="fa-regular fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center py-5 bg-white border rounded-4 shadow-sm">
+        <i class="fa-regular fa-star text-warning fs-1 mb-3"></i>
+        <h5 class="fw-bold">No starred tasks</h5>
+        <p class="text-muted small mb-3">Click the star icon on any task to prioritize it here.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

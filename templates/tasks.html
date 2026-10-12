@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}My Tasks — TaskNova{% endblock %}
+
+{% block content %}
+<div class="tasks-page">
+  <!-- Top Action & Filter Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h4 class="fw-bold mb-1">My Tasks</h4>
+      <span class="text-muted small">Manage, organize, and execute all your productivity tasks</span>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <!-- View Mode Toggle (List vs Card) -->
+      <div class="btn-group p-1 bg-white border rounded-pill shadow-sm" role="group">
+        <button type="button" class="btn btn-sm btn-link text-dark rounded-pill px-3 active" id="listViewBtn" onclick="switchTaskView('list')">
+          <i class="fa-solid fa-list me-1"></i> List
+        </button>
+        <button type="button" class="btn btn-sm btn-link text-muted rounded-pill px-3" id="cardViewBtn" onclick="switchTaskView('card')">
+          <i class="fa-solid fa-table-cells-large me-1"></i> Cards
+        </button>
+      </div>
+
+      <!-- Add New Task button -->
+      <button class="btn btn-primary rounded-pill px-3 shadow-sm d-flex align-items-center gap-2" style="background: var(--color-indigo-600); border:none;" onclick="openTaskModal()">
+        <i class="fa-solid fa-plus"></i>
+        <span>New Task</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="stat-card p-3 mb-4">
+    <div class="row g-2 align-items-center">
+      <!-- Search Input -->
+      <div class="col-lg-3 col-md-6">
+        <div class="position-relative">
+          <i class="fa-solid fa-magnifying-glass position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.85rem;"></i>
+          <input type="text" class="form-control form-control-sm ps-4" id="taskSearchFilter" placeholder="Search tasks or tags..." value="{{ search_query }}" oninput="applyFilters()">
+        </div>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="col-lg-2 col-md-3 col-6">
+        <select class="form-select form-select-sm" id="statusFilter" onchange="applyFilters()">
+          <option value="">All Statuses</option>
+          <option value="Pending" {% if current_status == 'Pending' %}selected{% endif %}>Pending</option>
+          <option value="In Progress" {% if current_status == 'In Progress' %}selected{% endif %}>In Progress</option>
+          <option value="Completed" {% if current_status == 'Completed' %}selected{% endif %}>Completed</option>
+        </select>
+      </div>
+
+      <!-- Priority Filter -->
+      <div class="col-lg-2 col-md-3 col-6">
+        <select class="form-select form-select-sm" id="priorityFilter" onchange="applyFilters()">
+          <option value="">All Priorities</option>
+          <option value="Urgent" {% if current_priority == 'Urgent' %}selected{% endif %}>Urgent</option>
+          <option value="High" {% if current_priority == 'High' %}selected{% endif %}>High</option>
+          <option value="Medium" {% if current_priority == 'Medium' %}selected{% endif %}>Medium</option>
+          <option value="Low" {% if current_priority == 'Low' %}selected{% endif %}>Low</option>
+        </select>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="col-lg-2 col-md-4 col-6">
+        <select class="form-select form-select-sm" id="categoryFilter" onchange="applyFilters()">
+          <option value="">All Categories</option>
+          <option value="Work" {% if current_category == 'Work' %}selected{% endif %}>Work</option>
+          <option value="Personal" {% if current_category == 'Personal' %}selected{% endif %}>Personal</option>
+          <option value="Study" {% if current_category == 'Study' %}selected{% endif %}>Study</option>
+          <option value="Health" {% if current_category == 'Health' %}selected{% endif %}>Health</option>
+          <option value="Other" {% if current_category == 'Other' %}selected{% endif %}>Other</option>
+        </select>
+      </div>
+
+      <!-- Project Filter -->
+      <div class="col-lg-2 col-md-4 col-6">
+        <select class="form-select form-select-sm" id="projectFilter" onchange="applyFilters()">
+          <option value="">All Projects</option>
+          {% for proj in projects_list %}
+          <option value="{{ proj.id }}" {% if current_project_id == proj.id|string %}selected{% endif %}>{{ proj.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Sort Options -->
+      <div class="col-lg-1 col-md-4 col-12 text-end">
+        <select class="form-select form-select-sm" id="sortFilter" onchange="applyFilters()">
+          <option value="priority" {% if current_sort == 'priority' %}selected{% endif %}>Priority</option>
+          <option value="due_date_asc" {% if current_sort == 'due_date_asc' %}selected{% endif %}>Due Date</option>
+          <option value="created_at_desc" {% if current_sort == 'created_at_desc' %}selected{% endif %}>Newest</option>
+          <option value="title_asc" {% if current_sort == 'title_asc' %}selected{% endif %}>Title</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Filter Counter -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="text-muted small">
+      Showing <strong id="displayedCount">{{ tasks|length }}</strong> task(s)
+    </div>
+    <button class="btn btn-link btn-sm text-decoration-none text-muted p-0" onclick="resetAllFilters()">
+      <i class="fa-solid fa-arrows-rotate me-1"></i> Reset Filters
+    </button>
+  </div>
+
+  <!-- Tasks Container: List View -->
+  <div id="tasksListView" class="tasks-container">
+    {% if tasks %}
+      {% for task in tasks %}
+      <div class="task-item {% if task.status == 'Completed' %}is-completed{% endif %}" id="task-row-{{ task.id }}" data-title="{{ task.title|lower }}" data-desc="{{ (task.description or '')|lower }}" data-status="{{ task.status }}" data-priority="{{ task.priority }}" data-category="{{ task.category }}" data-project="{{ task.project_id or '' }}">
+        <div class="task-left">
+          <button class="custom-checkbox-btn {% if task.status == 'Completed' %}checked{% endif %}" onclick="toggleTaskComplete({{ task.id }})" aria-label="Toggle Complete">
+            <i class="fa-solid fa-check fa-xs"></i>
+          </button>
+          <div class="task-info-block">
+            <div class="task-title-row">
+              <span class="task-title">{{ task.title }}</span>
+              {% if task.is_important %}
+              <i class="fa-solid fa-star text-warning fa-xs" title="Important"></i>
+              {% endif %}
+            </div>
+            {% if task.description %}
+            <p class="task-desc">{{ task.description }}</p>
+            {% endif %}
+            <div class="task-meta-row">
+              <span class="task-badge {{ task.priority|lower }}">
+                <i class="fa-solid fa-bolt"></i> {{ task.priority }}
+              </span>
+              <span class="task-project-pill">
+                <i class="fa-solid fa-tag me-1"></i> {{ task.category }}
+              </span>
+              {% if task.project_name %}
+              <span class="task-project-pill">
+                <span class="project-dot" style="background-color: {{ task.project_color or '#6366f1' }};"></span>
+                {{ task.project_name }}
+              </span>
+              {% endif %}
+              {% if task.due_date %}
+              <span class="task-date-pill">
+                <i class="fa-regular fa-calendar"></i> {{ task.due_date|replace('T', ' ') }}
+              </span>
+              {% endif %}
+              <span class="task-date-pill text-muted">
+                <i class="fa-regular fa-clock"></i> {{ task.estimated_duration }}m
+              </span>
+              {% if task.tags %}
+                {% for tag in task.tags.split(',') %}
+                <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.68rem;">#{{ tag.strip() }}</span>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="task-right">
+          <button class="action-icon-btn" onclick="startFocusWithTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')" title="Start Pomodoro Focus">
+            <i class="fa-solid fa-stopwatch text-primary"></i>
+          </button>
+          <button class="action-icon-btn {% if task.is_important %}star-active{% endif %}" onclick="toggleTaskImportant({{ task.id }})" title="Star as Important">
+            <i class="fa-solid fa-star"></i>
+          </button>
+          <button class="action-icon-btn" onclick="openEditTaskModal({{ task.id }})" title="Edit Task">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button class="action-icon-btn danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')" title="Delete Task">
+            <i class="fa-regular fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center py-5 bg-white border rounded-4 shadow-sm" id="emptyStateBox">
+        <i class="fa-solid fa-clipboard-check text-muted fs-1 mb-3"></i>
+        <h5 class="fw-bold text-dark">No tasks found</h5>
+        <p class="text-muted small mb-3">Try adjusting your filters or create a new task to get started.</p>
+        <button class="btn btn-primary rounded-pill btn-sm px-4" style="background: var(--color-indigo-600); border:none;" onclick="openTaskModal()">
+          <i class="fa-solid fa-plus me-1"></i> Create Task
+        </button>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Tasks Container: Card View (Hidden by default) -->
+  <div id="tasksCardView" class="tasks-grid-view d-none">
+    {% for task in tasks %}
+    <div class="task-card-item {% if task.status == 'Completed' %}is-completed{% endif %}" id="task-card-{{ task.id }}" data-title="{{ task.title|lower }}" data-desc="{{ (task.description or '')|lower }}" data-status="{{ task.status }}" data-priority="{{ task.priority }}" data-category="{{ task.category }}" data-project="{{ task.project_id or '' }}">
+      <div>
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <span class="task-badge {{ task.priority|lower }}">
+            <i class="fa-solid fa-bolt"></i> {{ task.priority }}
+          </span>
+          <button class="action-icon-btn p-0 {% if task.is_important %}star-active{% endif %}" onclick="toggleTaskImportant({{ task.id }})">
+            <i class="fa-solid fa-star"></i>
+          </button>
+        </div>
+        <h6 class="fw-bold text-dark mb-1">{{ task.title }}</h6>
+        {% if task.description %}
+        <p class="text-muted small mb-3" style="line-height: 1.4;">{{ task.description }}</p>
+        {% endif %}
+      </div>
+
+      <div class="pt-3 border-top mt-2">
+        <div class="d-flex flex-wrap gap-1 mb-3">
+          <span class="task-project-pill">{{ task.category }}</span>
+          {% if task.project_name %}
+          <span class="task-project-pill">
+            <span class="project-dot" style="background-color: {{ task.project_color or '#6366f1' }};"></span>
+            {{ task.project_name }}
+          </span>
+          {% endif %}
+          {% if task.due_date %}
+          <span class="task-date-pill">
+            <i class="fa-regular fa-calendar"></i> {{ task.due_date|replace('T', ' ') }}
+          </span>
+          {% endif %}
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+          <button class="btn btn-sm {% if task.status == 'Completed' %}btn-light text-muted{% else %}btn-outline-success{% endif %} rounded-pill px-3" onclick="toggleTaskComplete({{ task.id }})">
+            <i class="fa-solid fa-check me-1"></i> {% if task.status == 'Completed' %}Reopen{% else %}Complete{% endif %}
+          </button>
+          <div class="d-flex gap-1">
+            <button class="action-icon-btn" onclick="startFocusWithTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')" title="Pomodoro">
+              <i class="fa-solid fa-stopwatch text-primary"></i>
+            </button>
+            <button class="action-icon-btn" onclick="openEditTaskModal({{ task.id }})">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button class="action-icon-btn danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')">
+              <i class="fa-regular fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/tasks.js') }}"></script>
+{% endblock %}

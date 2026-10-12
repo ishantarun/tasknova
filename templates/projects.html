@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Projects — TaskNova{% endblock %}
+
+{% block content %}
+<div class="projects-page">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold mb-1">Projects</h4>
+      <span class="text-muted small">Group tasks into high-level deliverables and track progress</span>
+    </div>
+    <button class="btn btn-primary rounded-pill px-3 shadow-sm d-flex align-items-center gap-2" style="background: var(--color-indigo-600); border:none;" onclick="openProjectModal()">
+      <i class="fa-solid fa-plus"></i>
+      <span>New Project</span>
+    </button>
+  </div>
+
+  <!-- Projects Grid -->
+  <div class="row g-4">
+    {% for proj in projects %}
+    <div class="col-lg-4 col-md-6" id="project-card-{{ proj.id }}">
+      <div class="stat-card h-100 d-flex flex-column justify-content-between">
+        <div>
+          <!-- Project Header -->
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <div class="stat-icon-wrapper" style="background: {{ proj.color }}20; color: {{ proj.color }};">
+                <i class="fa-solid fa-{{ proj.icon or 'folder' }}"></i>
+              </div>
+              <div>
+                <h5 class="fw-bold mb-0 text-dark">{{ proj.name }}</h5>
+                <span class="text-muted" style="font-size: 0.75rem;">Created {{ (proj.created_at|string)[:10] }}</span>
+              </div>
+            </div>
+
+            <div class="dropdown">
+              <button class="action-icon-btn" data-bs-toggle="dropdown">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 p-2">
+                <li>
+                  <button class="dropdown-item rounded small" onclick="openEditProjectModal({{ proj.id }}, '{{ proj.name|replace("'", "\\'") }}', '{{ (proj.description or '')|replace("'", "\\'") }}', '{{ proj.color }}', '{{ proj.icon }}')">
+                    <i class="fa-solid fa-pen-to-square me-2"></i> Edit Project
+                  </button>
+                </li>
+                <li>
+                  <a class="dropdown-item rounded small" href="{{ url_for('main.tasks') }}?project_id={{ proj.id }}">
+                    <i class="fa-solid fa-list-check me-2"></i> View Tasks
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <button class="dropdown-item rounded small text-danger" onclick="confirmDeleteProject({{ proj.id }}, '{{ proj.name|replace("'", "\\'") }}')">
+                    <i class="fa-regular fa-trash-can me-2"></i> Delete Project
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <p class="text-muted small mb-3" style="line-height: 1.45;">
+            {{ proj.description or 'No project description provided.' }}
+          </p>
+        </div>
+
+        <!-- Progress and Metrics -->
+        <div class="pt-3 border-top mt-2">
+          <div class="d-flex justify-content-between align-items-center small mb-1">
+            <span class="text-muted fw-semibold">Progress</span>
+            <span class="fw-bold text-dark">{{ proj.progress_pct }}%</span>
+          </div>
+
+          <div class="custom-progress-bar mb-3">
+            <div class="custom-progress-fill" style="width: {{ proj.progress_pct }}%; background: {{ proj.color }};"></div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center small">
+            <span class="text-muted">
+              <strong>{{ proj.completed_tasks or 0 }}</strong> completed / <strong>{{ proj.total_tasks or 0 }}</strong> total
+            </span>
+            <a href="{{ url_for('main.tasks') }}?project_id={{ proj.id }}" class="btn btn-sm btn-light border rounded-pill px-3">
+              Tasks <i class="fa-solid fa-chevron-right ms-1 fa-xs"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

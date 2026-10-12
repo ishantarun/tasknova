@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — TaskNova{% endblock %}
+
+{% block content %}
+<div class="settings-page" style="max-width: 860px;">
+  <div class="mb-4">
+    <h4 class="fw-bold mb-1">Preferences & Settings</h4>
+    <span class="text-muted small">Personalize your TaskNova experience, timer configurations, and profile</span>
+  </div>
+
+  <form id="settingsForm" onsubmit="handleSettingsFormSubmit(event)">
+    <!-- 1. Profile Section -->
+    <div class="stat-card mb-4">
+      <h6 class="fw-bold mb-3 text-dark">
+        <i class="fa-solid fa-user-astronaut text-primary me-2"></i>Profile Identity
+      </h6>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small text-muted fw-semibold">Display Name</label>
+          <input type="text" class="form-control" name="user_name" value="{{ settings.get('user_name', 'Alex Hunter') }}" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small text-muted fw-semibold">Professional Role</label>
+          <input type="text" class="form-control" name="user_role" value="{{ settings.get('user_role', 'Senior Product Architect') }}">
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Appearance & Theme -->
+    <div class="stat-card mb-4">
+      <h6 class="fw-bold mb-3 text-dark">
+        <i class="fa-solid fa-palette text-primary me-2"></i>Appearance & Theme
+      </h6>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small text-muted fw-semibold">Workspace Theme</label>
+          <select class="form-select" name="theme" id="themeSelect" onchange="previewTheme(this.value)">
+            <option value="light" {% if settings.get('theme') == 'light' %}selected{% endif %}>Light (Default SaaS Clean)</option>
+            <option value="dark" {% if settings.get('theme') == 'dark' %}selected{% endif %}>Dark (Midnight Slate)</option>
+          </select>
+          <span class="text-muted" style="font-size: 0.72rem;">Changes reflect instantly and save to SQLite.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Nova Focus / Pomodoro Settings -->
+    <div class="stat-card mb-4">
+      <h6 class="fw-bold mb-3 text-dark">
+        <i class="fa-solid fa-stopwatch text-primary me-2"></i>Nova Focus Timer Configuration
+      </h6>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small text-muted fw-semibold">Focus Session Duration (Minutes)</label>
+          <input type="number" class="form-control" name="pomodoro_duration" value="{{ settings.get('pomodoro_duration', '25') }}" min="5" max="60">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small text-muted fw-semibold">Short Break Duration (Minutes)</label>
+          <input type="number" class="form-control" name="short_break" value="{{ settings.get('short_break', '5') }}" min="1" max="15">
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Save Button -->
+    <div class="d-flex justify-content-between align-items-center">
+      <span class="text-muted small">All preferences are stored persistently in the local database.</span>
+      <button type="submit" class="btn btn-primary rounded-pill px-4" style="background: var(--color-indigo-600); border:none;">
+        <i class="fa-solid fa-floppy-disk me-2"></i> Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function previewTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+
+  async function handleSettingsFormSubmit(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast('Settings saved successfully!', 'success');
+        localStorage.setItem('tasknova_theme', data.theme);
+      } else {
+        showToast('Failed to save settings', 'error');
+      }
+    } catch (err) {
+      showToast('Error saving settings', 'error');
+    }
+  }
+</script>
+{% endblock %}

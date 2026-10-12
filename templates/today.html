@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Today's Tasks — TaskNova{% endblock %}
+
+{% block content %}
+<div class="today-page">
+  <!-- Header with Date & Progress -->
+  <div class="stat-card p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <span class="badge rounded-pill bg-primary px-3 py-2 mb-2" style="background: linear-gradient(135deg, var(--color-indigo-600), var(--color-violet-600)) !important;">
+          <i class="fa-regular fa-sun me-1"></i> Today's Schedule
+        </span>
+        <h3 class="fw-bold mb-1">{{ current_date_formatted }}</h3>
+        <p class="text-muted small mb-0">Focus on what needs to be delivered before the day concludes.</p>
+      </div>
+
+      <div class="text-md-end">
+        <div class="fs-4 fw-bold text-primary mb-1">{{ metrics.today_completed }} of {{ metrics.today_total }} Completed</div>
+        <div class="custom-progress-bar" style="width: 200px;">
+          <div class="custom-progress-fill" style="width: {{ metrics.today_progress_pct }}%;"></div>
+        </div>
+        <span class="text-muted small">{{ metrics.today_progress_pct }}% of daily tasks done</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Tasks List -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-bold mb-0">Scheduled for Today</h5>
+    <button class="btn btn-primary rounded-pill btn-sm px-3" style="background: var(--color-indigo-600); border:none;" onclick="openTaskModalWithTodayDate()">
+      <i class="fa-solid fa-plus me-1"></i> Add Task for Today
+    </button>
+  </div>
+
+  <div class="tasks-container">
+    {% if tasks %}
+      {% for task in tasks %}
+      <div class="task-item {% if task.status == 'Completed' %}is-completed{% endif %}" id="task-row-{{ task.id }}">
+        <div class="task-left">
+          <button class="custom-checkbox-btn {% if task.status == 'Completed' %}checked{% endif %}" onclick="toggleTaskComplete({{ task.id }})">
+            <i class="fa-solid fa-check fa-xs"></i>
+          </button>
+          <div class="task-info-block">
+            <div class="task-title-row">
+              <span class="task-title">{{ task.title }}</span>
+              {% if task.is_important %}
+              <i class="fa-solid fa-star text-warning fa-xs"></i>
+              {% endif %}
+            </div>
+            {% if task.description %}
+            <p class="task-desc">{{ task.description }}</p>
+            {% endif %}
+            <div class="task-meta-row">
+              <span class="task-badge {{ task.priority|lower }}">{{ task.priority }}</span>
+              <span class="task-project-pill">{{ task.category }}</span>
+              {% if task.project_name %}
+              <span class="task-project-pill">
+                <span class="project-dot" style="background-color: {{ task.project_color or '#6366f1' }};"></span>
+                {{ task.project_name }}
+              </span>
+              {% endif %}
+              {% if task.due_date %}
+              <span class="task-date-pill">
+                <i class="fa-regular fa-clock"></i> {{ task.due_date|replace('T', ' ') }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="task-right">
+          <button class="action-icon-btn" onclick="startFocusWithTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')" title="Start Pomodoro">
+            <i class="fa-solid fa-stopwatch text-primary"></i>
+          </button>
+          <button class="action-icon-btn {% if task.is_important %}star-active{% endif %}" onclick="toggleTaskImportant({{ task.id }})">
+            <i class="fa-solid fa-star"></i>
+          </button>
+          <button class="action-icon-btn" onclick="openEditTaskModal({{ task.id }})">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button class="action-icon-btn danger" onclick="confirmDeleteTask({{ task.id }}, '{{ task.title|replace("'", "\\'") }}')">
+            <i class="fa-regular fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center py-5 bg-white border rounded-4 shadow-sm">
+        <i class="fa-regular fa-sun text-warning fs-1 mb-3"></i>
+        <h5 class="fw-bold">No tasks scheduled for today</h5>
+        <p class="text-muted small mb-3">You're all clear today! Relax or schedule a task to stay ahead.</p>
+        <button class="btn btn-primary rounded-pill btn-sm px-4" style="background: var(--color-indigo-600); border:none;" onclick="openTaskModalWithTodayDate()">
+          <i class="fa-solid fa-plus me-1"></i> Add Task for Today
+        </button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
